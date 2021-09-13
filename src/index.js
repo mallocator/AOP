@@ -32,7 +32,8 @@ export default class AOP {
         staticProps = target;
         dynamicProps = target.prototype;
       } else {
-        throw new Error('Passed in single method, not supported');
+        staticProps = target;
+        dynamicProps = target.prototype;
       }
     }
     if (typeof target == 'object') {
@@ -41,45 +42,57 @@ export default class AOP {
     }
 
     // For dynamic properties
-    for (let prop of Object.getOwnPropertyNames(dynamicProps)) {
-      const method = prop.toString();
-      // ignore constructor unless explicitly specified
-      if (method === 'constructor' || (methods.length && !methods.includes(method))) {
-        continue;
-      }
+    if (dynamicProps) {
+      for (let prop of Object.getOwnPropertyNames(dynamicProps)) {
+        const method = prop.toString();
+        // ignore constructor unless explicitly specified
+        if (method === 'constructor' || (methods.length && !methods.includes(method))) {
+          continue;
+        }
 
-      let original = dynamicProps[method];
-      dynamicProps[method] = (...args) => {
-        if (aspects.includes('before')) {
-          handler(method + ':before', args);
-        }
-        let result = original.apply(target, args);
-        if (aspects.includes('after')) {
-          // Haven't decided yet if I want to use the return value from this
-          return handler(method + ':after', result);
-        }
-        return result;
-      };
+        let original = dynamicProps[method];
+        dynamicProps[method] = (...args) => {
+          if (aspects.includes('before')) {
+            handler(method + ':before', args);
+          }
+          let result = original.apply(target, args);
+          if (aspects.includes('after')) {
+            // Haven't decided yet if I want to use the return value from this
+            return handler(method + ':after', result);
+          }
+          return result;
+        };
+      }
     }
 
     // For static properties
-    for (let prop of Object.getOwnPropertyNames(staticProps)) {
-      const method = prop.toString();
-      // ignore default properties unless explicitly specified
-      if (['length', 'prototype', 'name'].includes(method) && !methods.includes(method)) {
-        continue;
+    if (staticProps) {
+      for (let prop of Object.getOwnPropertyNames(staticProps)) {
+        const method = prop.toString();
+        // ignore default properties unless explicitly specified
+        if (['length', 'prototype', 'name'].includes(method) && !methods.includes(method)) {
+          continue;
+        }
+        const original = staticProps[method];
+        try {
+          staticProps[method] = (...args) => {
+            if (aspects.includes('before')) {
+              handler(method + ':before', args);
+            }
+            let result = original.apply(target, args);
+            if (aspects.includes('after')) {
+              handler(method + ':after', result);
+            }
+            return result;
+          };
+        } catch (e) {
+          // Expected on native classes like EventEmitter
+          if (['TypeError', 'RangeError'].includes(e.name)) {
+            return;
+          }
+          console.log(e);
+        }
       }
-      const original = staticProps[method];
-      staticProps[method] = (...args) => {
-        if (aspects.includes('before')) {
-          handler(method + ':before', args);
-        }
-        let result = original.apply(target, args);
-        if (aspects.includes('after')) {
-          handler(method + ':after', result);
-        }
-        return result;
-      };
     }
   }
 

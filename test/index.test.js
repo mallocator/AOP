@@ -1,7 +1,10 @@
-import AOP from '../src/index.js';
+import AOP              from '../src/index.js';
+import { EventEmitter } from 'events';
 
 // TODO test primitive return value
-// TODO test with native classes e.g. EventEmitter
+// TODO consider whether around should have control over method execution
+// TODO query based filter might be possible if we override the Object prototype constructor to register with a tracker
+// class. Might also work with the Function prototype to support non class function wrapping.
 
 const debug = false;
 
@@ -82,9 +85,10 @@ describe('Test base AOP functions', () => {
   it("doesn't work when passing in a method", () => {
     try {
       AOP.beforeMethods(Echo.staticMethod, () => {});
-      fail('Should have thrown an error');
+      throw new Error('Fail');
     } catch (e) {
       expect(e).toBeInstanceOf(Error);
+      expect(e.message).toEqual('Fail');
     }
   });
   
@@ -146,13 +150,17 @@ describe('Test base AOP functions', () => {
   });
   
   it('works around a method', () => {
+    let tracker1 = false;
+    let tracker2 = false;
     const handler = (methodName, returnValue) => {
       if (methodName.endsWith(':before')) {
         debug && console.log('increasing by 1 before class in around');
+        tracker1 = true;
         returnValue[0]++;
       }
       if (methodName.endsWith(':after')) {
         debug && console.log('reducing by 1 after class in around');
+        tracker2 = true;
         returnValue.arg1 = returnValue.arg1++;
         return returnValue;
       }
@@ -162,7 +170,9 @@ describe('Test base AOP functions', () => {
     // Now we increase again from the previous -1
     const result1 = new Echo().dynamicMethod(1, 2);
     expect(result1.arg1).toEqual(0);
+    expect(tracker1).toBe(true);
     expect(result1.arg2).toEqual([2]);
+    expect(tracker2).toBe(true);
     
     // Same here except starting from 0
     const result2 = Echo.staticMethod(1, 2);
@@ -178,10 +188,19 @@ describe('Test base AOP functions', () => {
   });
   
   it('works with private static methods', () => {
-    console.log('testing private');
     const result = Echo.callPrivateStaticMethod(1, 2);
     expect(result.arg1).toEqual(1);
     expect(result.arg2).toEqual([2]);
+  });
+  
+  it('works with native classes', () => {
+    let tracker = false;
+    const handler = () => {
+      tracker = true;
+    };
+    AOP.beforeMethods(EventEmitter, handler, 'emit');
+    new EventEmitter().emit('test');
+    expect(tracker).toBe(true);
   });
   
   it.skip('should execute an aspect before an instance is created', () => {

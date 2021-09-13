@@ -1,7 +1,7 @@
 {
   "name": "aop",
   "description": "A simple aspect oriented programming tools built in native javascript for the frontend or backend.",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
