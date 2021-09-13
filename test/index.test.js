@@ -1,7 +1,6 @@
 import AOP from '../src/index.js';
 
 // TODO test primitive return value
-// TODO test with private methods - might not work if read-only
 // TODO test with native classes e.g. EventEmitter
 
 const debug = false;
@@ -20,12 +19,28 @@ describe('Test base AOP functions', () => {
       return {arg1, arg2};
     }
     
+    #privateMethod(arg1, arg2) {
+      return {arg1, arg2};
+    }
+    
+    callPrivateMethod(arg1, ...arg2) {
+      return this.#privateMethod(arg1, arg2);
+    }
+    
+    static #privateStaticMethod(arg1, arg2) {
+      return {arg1, arg2};
+    }
+    
+    static callPrivateStaticMethod(arg1, ...arg2) {
+      return Echo.#privateStaticMethod(arg1, arg2);
+    }
+    
     static staticMethod(arg1, ...arg2) {
       return {arg1, arg2};
     }
   }
   
-  it('should execute a handler before a method on an instance is called', () => {
+  it('works before a method on an instance is called', () => {
     const instance = new Echo();
     const handler = (methodName, params) => {
       debug && console.log('increasing by 1 before instance');
@@ -46,7 +61,7 @@ describe('Test base AOP functions', () => {
     expect(result2.arg2).toEqual([2]);
   });
   
-  it('should execute a handler before a method on a class is called', () => {
+  it('works before a method on a class is called', () => {
     const handler = (methodName, params) => {
       debug && console.log('increasing by 1 before class');
       params[0]++;
@@ -64,7 +79,7 @@ describe('Test base AOP functions', () => {
     expect(result2.arg2).toEqual([2]);
   });
   
-  it('should not work when passing in a method', () => {
+  it("doesn't work when passing in a method", () => {
     try {
       AOP.beforeMethods(Echo.staticMethod, () => {});
       fail('Should have thrown an error');
@@ -73,7 +88,7 @@ describe('Test base AOP functions', () => {
     }
   });
   
-  it('should execute a handler before a method on a class is called on select methods', () => {
+  it('works before a method on a class is called on select methods', () => {
     const handler = (methodName, params) => {
       debug && console.log('increasing by 1 before class filtered');
       params[0]++;
@@ -91,7 +106,7 @@ describe('Test base AOP functions', () => {
     expect(result2.arg2).toEqual([2]);
   });
   
-  it('should execute a handler after a method on an instance is called', () => {
+  it('works after a method on an instance is called', () => {
     const handler = (methodName, returnValue) => {
       debug && console.log('reducing by 1 after instance');
       returnValue.arg1--;
@@ -111,7 +126,7 @@ describe('Test base AOP functions', () => {
     expect(result2.arg2).toEqual([2]);
   });
   
-  it('should execute a handler after a method on a class is called', () => {
+  it('works after a method on a class is called', () => {
     const handler = (methodName, returnValue) => {
       debug && console.log('reducing by 3 after class');
       returnValue.arg1 = returnValue.arg1 - 3;
@@ -130,7 +145,7 @@ describe('Test base AOP functions', () => {
     expect(result2.arg2).toEqual([2]);
   });
   
-  it('should execute both before and after a method when using around', () => {
+  it('works around a method', () => {
     const handler = (methodName, returnValue) => {
       if (methodName.endsWith(':before')) {
         debug && console.log('increasing by 1 before class in around');
@@ -153,6 +168,20 @@ describe('Test base AOP functions', () => {
     const result2 = Echo.staticMethod(1, 2);
     expect(result2.arg1).toEqual(1);
     expect(result2.arg2).toEqual([2]);
+  });
+  
+  it('works with private instance methods', () => {
+    const instance = new Echo();
+    const result = instance.callPrivateMethod(1, 2);
+    expect(result.arg1).toEqual(0);
+    expect(result.arg2).toEqual([2]);
+  });
+  
+  it('works with private static methods', () => {
+    console.log('testing private');
+    const result = Echo.callPrivateStaticMethod(1, 2);
+    expect(result.arg1).toEqual(1);
+    expect(result.arg2).toEqual([2]);
   });
   
   it.skip('should execute an aspect before an instance is created', () => {

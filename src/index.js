@@ -53,7 +53,7 @@ export default class AOP {
         if (aspects.includes('before')) {
           handler(method + ':before', args);
         }
-        let result = original(...args);
+        let result = original.apply(target, args);
         if (aspects.includes('after')) {
           // Haven't decided yet if I want to use the return value from this
           return handler(method + ':after', result);
@@ -74,7 +74,7 @@ export default class AOP {
         if (aspects.includes('before')) {
           handler(method + ':before', args);
         }
-        let result = original(...args);
+        let result = original.apply(target, args);
         if (aspects.includes('after')) {
           handler(method + ':after', result);
         }
