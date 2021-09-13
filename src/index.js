@@ -32,7 +32,7 @@ export default class AOP {
         staticProps = target;
         dynamicProps = target.prototype;
       } else {
-        throw new Error('Passed in single method, not yet supported but stay tuned');
+        throw new Error('Passed in single method, not supported');
       }
     }
     if (typeof target == 'object') {
